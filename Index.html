@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Learning OS — Personal Learning Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{
+      --bg:#f7f7f4;--surface:#fff;--surface2:#f0f0eb;--text:#242622;--muted:#74786f;
+      --line:#e5e6df;--accent:#7d8d72;--accent2:#a9b69d;--danger:#b86464;--shadow:0 12px 40px rgba(35,38,32,.08);
+      --radius:20px;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input,select,textarea{font:inherit} button{cursor:pointer}
+    .app{min-height:100vh;display:grid;grid-template-columns:250px 1fr}
+    aside{position:sticky;top:0;height:100vh;padding:26px 18px;border-right:1px solid var(--line);background:rgba(255,255,255,.72);backdrop-filter:blur(18px)}
+    .brand{display:flex;align-items:center;gap:11px;padding:0 10px 28px}.logo{width:38px;height:38px;border-radius:13px;background:var(--accent);color:white;display:grid;place-items:center;font-weight:800}
+    .brand b{font-size:16px}.brand span{display:block;color:var(--muted);font-size:11px}
+    nav button{width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:12px;color:var(--muted);margin:2px 0}
+    nav button.active,nav button:hover{background:var(--surface2);color:var(--text)}
+    .nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#a0a39b;margin:18px 12px 7px}
+    main{min-width:0}.top{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 30px;background:rgba(247,247,244,.82);backdrop-filter:blur(18px);position:sticky;top:0;z-index:10}
+    .top .title{font-weight:700}.top-actions{display:flex;gap:8px;align-items:center}
+    .userpill{font-size:12px;color:var(--muted);padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:999px}
+    .content{padding:28px;max-width:1500px;margin:auto}.page{display:none}.page.active{display:block}
+    .hero{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:24px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--accent);font-weight:800}.hero h1{margin:5px 0 4px;font-size:32px;letter-spacing:-.04em}.hero p{margin:0;color:var(--muted)}
+    .btn{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:10px 14px;border-radius:12px;font-weight:650;box-shadow:0 2px 8px rgba(0,0,0,.03)}.btn:hover{transform:translateY(-1px)}.btn.primary{background:var(--accent);color:white;border-color:var(--accent)}.btn.ghost{background:transparent;box-shadow:none}.btn.danger{color:var(--danger)}
+    .grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:18px}.stat,.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}.stat{padding:18px}.stat .num{font-size:27px;font-weight:800;letter-spacing:-.04em}.stat .label{font-size:12px;color:var(--muted);margin-top:4px}
+    .cols2{grid-template-columns:1.3fr .7fr}.card{padding:20px}.card h3{margin:0 0 15px;font-size:15px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}
+    .course-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}.course{padding:17px;border:1px solid var(--line);border-radius:17px;background:#fff}.course-top{display:flex;justify-content:space-between;gap:10px}.course h4{margin:7px 0 2px;font-size:16px}.meta{color:var(--muted);font-size:12px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:var(--surface2);font-size:10px;font-weight:800}.progress{height:7px;background:#eceee7;border-radius:99px;overflow:hidden;margin:13px 0 8px}.progress i{display:block;height:100%;background:var(--accent);border-radius:99px}.course-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted)}
+    .toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:17px}.toolbar input,.toolbar select,.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface);border-radius:11px;padding:10px 12px;outline:none;width:100%}.toolbar input{width:250px}.toolbar select{width:auto}.field{margin-bottom:13px}.field label{display:block;font-size:11px;color:var(--muted);font-weight:750;margin:0 0 6px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.full{grid-column:1/-1}
+    .modal-wrap{display:none;position:fixed;inset:0;background:rgba(25,28,23,.36);backdrop-filter:blur(5px);z-index:100;align-items:center;justify-content:center;padding:18px}.modal-wrap.open{display:flex}.modal{width:min(760px,100%);max-height:90vh;overflow:auto;background:var(--surface);border-radius:24px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h2{margin:0;letter-spacing:-.03em}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}.list{display:grid;gap:9px}.listitem{padding:12px;border:1px solid var(--line);border-radius:13px;background:#fff}.tiny{font-size:11px;color:var(--muted)}.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:15px}
+    .chart{height:220px;display:flex;align-items:flex-end;gap:10px;padding-top:15px}.bar{flex:1;min-width:8px;background:var(--accent2);border-radius:8px 8px 3px 3px;position:relative}.bar span{position:absolute;bottom:-21px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted)}
+    .goal{margin-bottom:14px}.goalline{height:8px;background:#eceee7;border-radius:99px;overflow:hidden}.goalline i{display:block;height:100%;background:var(--accent);border-radius:99px}
+    .login{min-height:100vh;display:grid;place-items:center;padding:20px}.loginbox{width:min(440px,100%);background:white;border:1px solid var(--line);padding:32px;border-radius:26px;box-shadow:var(--shadow)}.loginbox h1{margin:0 0 6px}.loginbox p{color:var(--muted);margin-top:0}.switch{display:flex;gap:5px;background:var(--surface2);padding:4px;border-radius:12px;margin-bottom:15px}.switch button{flex:1;border:0;background:transparent;padding:9px;border-radius:9px}.switch button.active{background:#fff;font-weight:700}
+    .toast{position:fixed;right:20px;bottom:20px;background:#252823;color:white;padding:12px 15px;border-radius:12px;display:none;z-index:200}.toast.show{display:block}
+    @media(max-width:1050px){.app{grid-template-columns:78px 1fr}aside{padding:20px 10px}.brand div:last-child,.nav-label,nav button span{display:none}.brand{justify-content:center;padding-bottom:22px}.course-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:720px){.app{display:block}aside{position:fixed;bottom:0;top:auto;width:100%;height:64px;border-right:0;border-top:1px solid var(--line);z-index:50;padding:5px;background:rgba(255,255,255,.92)}.brand{display:none}nav{display:flex;justify-content:space-around}nav button{width:auto;padding:9px}.top{padding:0 15px;height:60px}.content{padding:18px 14px 85px}.hero{align-items:flex-start;flex-direction:column}.hero h1{font-size:27px}.stats{grid-template-columns:repeat(2,1fr)}.course-grid,.cols2,.formgrid{grid-template-columns:1fr}.toolbar input{width:100%}.toolbar select{width:calc(50% - 5px)}.userpill{display:none}}
+  </style>
+</head>
+<body>
+<div id="loginView" class="login">
+  <div class="loginbox">
+    <div class="brand" style="padding:0 0 20px"><div class="logo">L</div><div><b>Learning OS</b><span>Personal learning dashboard</span></div></div>
+    <h1>Tu aprendizaje, en un solo lugar.</h1><p>Guarda cursos, sesiones, certificados, objetivos y progreso. Tus datos quedan asociados a tu cuenta.</p>
+    <div class="switch"><button id="loginTab" class="active" onclick="setAuthMode('login')">Ingresar</button><button id="signupTab" onclick="setAuthMode('signup')">Crear cuenta</button></div>
+    <form id="authForm" onsubmit="authSubmit(event)">
+      <div class="field"><label>Email</label><input id="authEmail" type="email" required placeholder="tu@email.com"></div>
+      <div class="field"><label>Contraseña</label><input id="authPassword" type="password" minlength="6" required placeholder="••••••••"></div>
+      <button class="btn primary" style="width:100%">Continuar</button>
+    </form>
+    <p class="tiny" style="margin-top:15px">Necesitas configurar tu proyecto Supabase siguiendo el README incluido.</p>
+  </div>
+</div>
+
+<div id="appView" class="app" style="display:none">
+  <aside>
+    <div class="brand"><div class="logo">L</div><div><b>Learning OS</b><span>Personal learning dashboard</span></div></div>
+    <nav>
+      <div class="nav-label">Workspace</div>
+      <button class="active" data-page="dashboard" onclick="showPage('dashboard')">◉ <span>Dashboard</span></button>
+      <button data-page="courses" onclick="showPage('courses')">▣ <span>Mis cursos</span></button>
+      <button data-page="sessions" onclick="showPage('sessions')">◷ <span>Sesiones</span></button>
+      <button data-page="calendar" onclick="showPage('calendar')">□ <span>Calendario</span></button>
+      <button data-page="certificates" onclick="showPage('certificates')">◇ <span>Certificados</span></button>
+      <button data-page="goals" onclick="showPage('goals')">◎ <span>Objetivos</span></button>
+      <button data-page="stats" onclick="showPage('stats')">↗ <span>Estadísticas</span></button>
+      <div class="nav-label">Sistema</div>
+      <button onclick="exportExcel()">⇩ <span>Exportar Excel</span></button>
+      <button onclick="logout()">↪ <span>Cerrar sesión</span></button>
+    </nav>
+  </aside>
+  <main>
+    <header class="top"><div id="topTitle" class="title">Dashboard</div><div class="top-actions"><button class="btn" onclick="exportExcel()">Excel ↓</button><div id="userPill" class="userpill"></div></div></header>
+    <div class="content">
+      <section id="page-dashboard" class="page active"></section>
+      <section id="page-courses" class="page"></section>
+      <section id="page-sessions" class="page"></section>
+      <section id="page-calendar" class="page"></section>
+      <section id="page-certificates" class="page"></section>
+      <section id="page-goals" class="page"></section>
+      <section id="page-stats" class="page"></section>
+    </div>
+  </main>
+</div>
+<div id="modalWrap" class="modal-wrap" onclick="if(event.target===this)closeModal()"><div id="modal" class="modal"></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = "https://hoqdflzdkexbsengddgf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ujAXNZ9FltVl6ztkehpZbg_BQYqp_dr";
+let sb = null, user = null, authMode = 'login';
+let state = {courses:[],sessions:[],goals:[],certificates:[]};
+
+function configured(){ return !SUPABASE_URL.includes("YOUR_") && !SUPABASE_ANON_KEY.includes("YOUR_"); }
+function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500)}
+function setAuthMode(m){authMode=m;document.getElementById('loginTab').classList.toggle('active',m==='login');document.getElementById('signupTab').classList.toggle('active',m==='signup')}
+async function authSubmit(e){
+  e.preventDefault();
+  if(!configured()){toast("Configura Supabase primero. Revisa README.md.");return}
+  const email=authEmail.value,password=authPassword.value;
+  const r=authMode==='login'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});
+  if(r.error) toast(r.error.message); else toast(authMode==='signup'?"Cuenta creada. Revisa tu email si se solicita.":"Bienvenida ✨");
+}
+async function boot(){
+  if(!configured()) return;
+  sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  const {data}=await sb.auth.getSession(); if(data.session) await enter(data.session.user);
+  sb.auth.onAuthStateChange(async(_e,s)=>{if(s) await enter(s.user); else leave()});
+}
+async function enter(u){user=u;document.getElementById('loginView').style.display='none';document.getElementById('appView').style.display='grid';document.getElementById('userPill').textContent=u.email;await loadAll();renderAll()}
+function leave(){user=null;document.getElementById('loginView').style.display='grid';document.getElementById('appView').style.display='none'}
+async function logout(){if(sb) await sb.auth.signOut()}
+async function loadAll(){
+  const tables=['courses','sessions','goals','certificates'];
+  for(const t of tables){const {data,error}=await sb.from(t).select('*').order('created_at',{ascending:false});if(!error)state[t]=data||[]}
+}
+async function dbInsert(table,obj){const {data,error}=await sb.from(table).insert({...obj,user_id:user.id}).select().single();if(error){toast(error.message);return null}state[table].unshift(data);renderAll();return data}
+async function dbUpdate(table,id,obj){const {data,error}=await sb.from(table).update(obj).eq('id',id).eq('user_id',user.id).select().single();if(error){toast(error.message);return null}state[table]=state[table].map(x=>x.id===id?data:x);renderAll();return data}
+async function dbDelete(table,id){const {error}=await sb.from(table).delete().eq('id',id).eq('user_id',user.id);if(error){toast(error.message);return}state[table]=state[table].filter(x=>x.id!==id);renderAll();toast("Eliminado")}
+function showPage(p){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');document.querySelectorAll('nav button[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===p));document.getElementById('topTitle').textContent=({dashboard:'Dashboard',courses:'Mis cursos',sessions:'Sesiones de estudio',calendar:'Calendario',certificates:'Certificados',goals:'Objetivos',stats:'Estadísticas'})[p];renderAll()}
+function openModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalWrap').classList.add('open')}
+function closeModal(){document.getElementById('modalWrap').classList.remove('open')}
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+const money= n=>Number(n||0).toLocaleString('es-PE');
+function courseForm(c={}){openModal(`<div class="modal-head"><h2>${c.id?'Editar curso':'Nuevo curso'}</h2><button class="btn ghost" onclick="closeModal()">✕</button></div>
+<form onsubmit="saveCourse(event,'${c.id||''}')"><div class="formgrid">
+<div class="field"><label>Nombre *</label><input name="title" required value="${esc(c.title)}"></div><div class="field"><label>Plataforma</label><input name="platform" value="${esc(c.platform)}" placeholder="Coursera, Yale, edX..."></div>
+<div class="field"><label>Categoría</label><input name="category" value="${esc(c.category)}" placeholder="Finance, Data, Management..."></div><div class="field"><label>Instructor</label><input name="instructor" value="${esc(c.instructor)}"></div>
+<div class="field"><label>Estado</label><select name="status">${['pending','in_progress','paused','completed','abandoned'].map(x=>`<option ${c.status===x?'selected':''} value="${x}">${statusLabel(x)}</option>`).join('')}</select></div>
+<div class="field"><label>Prioridad</label><select name="priority">${['low','normal','high','now'].map(x=>`<option ${c.priority===x?'selected':''} value="${x}">${priorityLabel(x)}</option>`).join('')}</select></div>
+<div class="field"><label>Progreso %</label><input name="progress" type="number" min="0" max="100" value="${c.progress||0}"></div><div class="field"><label>Duración estimada (horas)</label><input name="estimated_hours" type="number" step=".25" min="0" value="${c.estimated_hours||0}"></div>
+<div class="field"><label>Fecha de inicio</label><input name="start_date" type="date" value="${c.start_date||''}"></div><div class="field"><label>Fecha objetivo</label><input name="target_date" type="date" value="${c.target_date||''}"></div>
+<div class="field full"><label>URL del curso</label><input name="url" type="url" value="${esc(c.url)}" placeholder="https://..."></div>
+<div class="field full"><label>Notas</label><textarea name="notes" rows="4">${esc(c.notes)}</textarea></div>
+</div><button class="btn primary" style="width:100%">${c.id?'Guardar cambios':'Crear curso'}</button></form>`)}
+function statusLabel(x){return {pending:'Por empezar',in_progress:'En progreso',paused:'Pausado',completed:'Completado',abandoned:'Abandonado'}[x]||x}
+function priorityLabel(x){return {low:'Baja',normal:'Normal',high:'Alta',now:'Ahora'}[x]||x}
+async function saveCourse(e,id){e.preventDefault();const f=new FormData(e.target),o=Object.fromEntries(f.entries());o.progress=Number(o.progress||0);o.estimated_hours=Number(o.estimated_hours||0);if(id)await dbUpdate('courses',id,o);else await dbInsert('courses',o);closeModal();toast("Curso guardado ✨")}
+function courseCard(c){return `<article class="course"><div class="course-top"><span class="badge">${esc(c.platform||'Sin plataforma')}</span><span class="badge">${priorityLabel(c.priority||'normal')}</span></div><h4>${esc(c.title)}</h4><div class="meta">${esc(c.category||'Sin categoría')} ${c.instructor?'· '+esc(c.instructor):''}</div><div class="progress"><i style="width:${Math.min(100,Math.max(0,c.progress||0))}%"></i></div><div class="course-foot"><b>${c.progress||0}%</b><span>${statusLabel(c.status||'pending')}</span></div><div style="display:flex;gap:7px;margin-top:12px"><button class="btn" onclick='courseForm(${JSON.stringify(c).replace(/</g,"\\u003c")})'>Editar</button>${c.url?`<a class="btn" href="${esc(c.url)}" target="_blank">Abrir ↗</a>`:''}<button class="btn ghost danger" onclick="dbDelete('courses','${c.id}')">Eliminar</button></div></article>`}
+function renderDashboard(){
+ const cs=state.courses,s=state.sessions,g=state.goals,done=cs.filter(x=>x.status==='completed').length,prog=cs.filter(x=>x.status==='in_progress').length,hours=s.reduce((a,x)=>a+Number(x.minutes||0),0)/60;
+ const active=cs.filter(x=>x.status==='in_progress').sort((a,b)=>(b.priority==='now')-(a.priority==='now')).slice(0,6);
+ document.getElementById('page-dashboard').innerHTML=`<div class="hero"><div><div class="eyebrow">Tu learning OS</div><h1>Hola, ${esc((user.email||'').split('@')[0])} ✦</h1><p>Una vista clara de todo lo que estás aprendiendo.</p></div><button class="btn primary" onclick="courseForm()">+ Nuevo curso</button></div>
+ <div class="grid stats"><div class="stat"><div class="num">${cs.length}</div><div class="label">Cursos registrados</div></div><div class="stat"><div class="num">${prog}</div><div class="label">En progreso</div></div><div class="stat"><div class="num">${done}</div><div class="label">Completados</div></div><div class="stat"><div class="num">${hours.toFixed(1)}h</div><div class="label">Tiempo estudiado</div></div><div class="stat"><div class="num">${xp()}</div><div class="label">XP acumulado</div></div></div>
+ <div class="grid cols2"><div class="card"><div class="section-head"><h3>Continuar aprendiendo</h3><button class="btn" onclick="showPage('courses')">Ver todos</button></div>${active.length?`<div class="course-grid">${active.map(courseCard).join('')}</div>`:'<div class="empty">No tienes cursos en progreso. Añade uno para empezar.</div>'}</div>
+ <div class="card"><div class="section-head"><h3>Objetivos</h3><button class="btn" onclick="showPage('goals')">Gestionar</button></div>${g.length?g.slice(0,4).map(goalView).join(''):'<div class="empty">Crea tu primer objetivo de aprendizaje.</div>'}</div></div>`}
+function renderCourses(){
+ document.getElementById('page-courses').innerHTML=`<div class="hero"><div><div class="eyebrow">Biblioteca</div><h1>Mis cursos</h1><p>Todo lo que quieres aprender, con progreso y prioridad.</p></div><button class="btn primary" onclick="courseForm()">+ Nuevo curso</button></div>
+ <div class="toolbar"><input id="courseSearch" oninput="filterCourses()" placeholder="Buscar curso..."><select id="statusFilter" onchange="filterCourses()"><option value="">Todos los estados</option>${['pending','in_progress','paused','completed','abandoned'].map(x=>`<option value="${x}">${statusLabel(x)}</option>`).join('')}</select><select id="priorityFilter" onchange="filterCourses()"><option value="">Todas las prioridades</option>${['now','high','normal','low'].map(x=>`<option value="${x}">${priorityLabel(x)}</option>`).join('')}</select><button class="btn" onclick="exportExcel()">Exportar Excel ↓</button></div><div id="courseList" class="course-grid"></div>`;filterCourses()}
+function filterCourses(){const q=(document.getElementById('courseSearch')?.value||'').toLowerCase(),s=document.getElementById('statusFilter')?.value||'',p=document.getElementById('priorityFilter')?.value||'';const a=state.courses.filter(c=>(!q||`${c.title} ${c.platform} ${c.category}`.toLowerCase().includes(q))&&(!s||c.status===s)&&(!p||c.priority===p));document.getElementById('courseList').innerHTML=a.length?a.map(courseCard).join(''):'<div class="empty" style="grid-column:1/-1">No encontramos cursos con esos filtros.</div>'}
+function sessionForm(){openModal(`<div class="modal-head"><h2>Registrar sesión</h2><button class="btn ghost" onclick="closeModal()">✕</button></div><form onsubmit="saveSession(event)"><div class="formgrid"><div class="field full"><label>Curso *</label><select name="course_id" required>${state.courses.map(c=>`<option value="${c.id}">${esc(c.title)}</option>`).join('')}</select></div><div class="field"><label>Fecha *</label><input name="date" type="date" required value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Minutos *</label><input name="minutes" type="number" min="1" required value="45"></div><div class="field full"><label>Qué hiciste / notas</label><textarea name="notes" rows="4"></textarea></div></div><button class="btn primary" style="width:100%">Guardar sesión</button></form>`)}
+async function saveSession(e){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.minutes=Number(f.minutes);await dbInsert('sessions',f);closeModal();toast("Sesión registrada 🔥")}
+function renderSessions(){const rows=state.sessions.slice(0,30);document.getElementById('page-sessions').innerHTML=`<div class="hero"><div><div class="eyebrow">Actividad</div><h1>Sesiones de estudio</h1><p>Registra cada bloque y construye tu historial.</p></div><button class="btn primary" onclick="sessionForm()">+ Registrar sesión</button></div><div class="card"><div class="list">${rows.length?rows.map(x=>{let c=state.courses.find(c=>c.id===x.course_id);return `<div class="listitem"><div class="row"><b>${esc(c?.title||'Curso eliminado')}</b><span class="badge">${x.minutes} min</span></div><div class="tiny">${x.date} · ${esc(x.notes||'Sin notas')}</div></div>`}).join(''):'<div class="empty">Todavía no hay sesiones.</div>'}</div></div>`}
+function goalForm(g={}){openModal(`<div class="modal-head"><h2>${g.id?'Editar objetivo':'Nuevo objetivo'}</h2><button class="btn ghost" onclick="closeModal()">✕</button></div><form onsubmit="saveGoal(event,'${g.id||''}')"><div class="formgrid"><div class="field full"><label>Objetivo *</label><input name="title" required value="${esc(g.title)}" placeholder="Completar 12 cursos en 2026"></div><div class="field"><label>Meta numérica</label><input name="target" type="number" min="1" value="${g.target||1}"></div><div class="field"><label>Progreso actual</label><input name="current" type="number" min="0" value="${g.current||0}"></div><div class="field"><label>Fecha objetivo</label><input name="target_date" type="date" value="${g.target_date||''}"></div><div class="field"><label>Categoría</label><input name="category" value="${esc(g.category)}"></div></div><button class="btn primary" style="width:100%">Guardar objetivo</button></form>`)}
+async function saveGoal(e,id){e.preventDefault();const f=Object.fromEntries(new FormData(e.target));f.target=Number(f.target);f.current=Number(f.current);if(id)await dbUpdate('goals',id,f);else await dbInsert('goals',f);closeModal();toast("Objetivo guardado 🎯")}
+function goalView(g){const pct=Math.min(100,Math.round((Number(g.current||0)/Math.max(1,Number(g.target||1)))*100));return `<div class="goal"><div class="row"><b>${esc(g.title)}</b><span class="tiny">${g.current||0}/${g.target||1}</span></div><div class="goalline" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="tiny">${pct}%${g.target_date?' · '+g.target_date:''}</div></div>`}
+function renderGoals(){document.getElementById('page-goals').innerHTML=`<div class="hero"><div><div class="eyebrow">Dirección</div><h1>Objetivos</h1><p>Convierte cursos sueltos en metas concretas.</p></div><button class="btn primary" onclick="goalForm()">+ Nuevo objetivo</button></div><div class="card"><div class="list">${state.goals.length?state.goals.map(g=>`<div class="listitem">${goalView(g)}<div style="display:flex;gap:7px"><button class="btn" onclick='goalForm(${JSON.stringify(g).replace(/</g,"\\u003c")})'>Editar</button><button class="btn ghost danger" onclick="dbDelete('goals','${g.id}')">Eliminar</button></div></div>`).join(''):'<div class="empty">Crea objetivos como “Completar 10 cursos”, “Dominar Power BI” o “Estudiar 20 horas”.</div>'}</div></div>`}
+function renderCertificates(){document.getElementById('page-certificates').innerHTML=`<div class="hero"><div><div class="eyebrow">Logros</div><h1>Certificados</h1><p>Centraliza tus certificaciones y sus archivos.</p></div><button class="btn primary" onclick="certificateForm()">+ Añadir certificado</button></div><div class="card"><div class="list">${state.certificates.length?state.certificates.map(c=>`<div class="listitem"><div class="row"><b>${esc(c.title)}</b><span class="badge">${esc(c.platform||'')}</span></div><div class="tiny">${c.issue_date||'Sin fecha'} · ${esc(c.credential_url||'')}</div><div style="margin-top:8px"><button class="btn ghost danger" onclick="dbDelete('certificates','${c.id}')">Eliminar</button></div></div>`).join(''):'<div class="empty">Añade certificados obtenidos para tener tu portafolio de aprendizaje en un solo sitio.</div>'}</div></div>`}
+function certificateForm(){openModal(`<div class="modal-head"><h2>Añadir certificado</h2><button class="btn ghost" onclick="closeModal()">✕</button></div><form onsubmit="saveCertificate(event)"><div class="field"><label>Nombre *</label><input name="title" required></div><div class="formgrid"><div class="field"><label>Plataforma</label><input name="platform"></div><div class="field"><label>Fecha de emisión</label><input name="issue_date" type="date"></div><div class="field full"><label>URL / credencial</label><input name="credential_url" type="url"></div><div class="field full"><label>Archivo del certificado (opcional)</label><input id="certFile" type="file" accept=".pdf,.png,.jpg,.jpeg"></div></div><p class="tiny">El archivo se guarda en Supabase Storage cuando el bucket “certificates” está configurado.</p><button class="btn primary" style="width:100%">Guardar certificado</button></form>`)}
+async function saveCertificate(e){e.preventDefault();const f=new FormData(e.target),o={title:f.get('title'),platform:f.get('platform'),issue_date:f.get('issue_date'),credential_url:f.get('credential_url')};const file=document.getElementById('certFile').files[0];if(file){const path=`${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const up=await sb.storage.from('certificates').upload(path,file);if(!up.error)o.file_path=path;else toast("Certificado guardado, pero el archivo no pudo subirse.")}await dbInsert('certificates',o);closeModal();toast("Certificado añadido 🏆")}
+function renderCalendar(){const dates=state.courses.filter(c=>c.target_date).sort((a,b)=>a.target_date.localeCompare(b.target_date));document.getElementById('page-calendar').innerHTML=`<div class="hero"><div><div class="eyebrow">Planificación</div><h1>Calendario</h1><p>Fechas objetivo de cursos y metas.</p></div></div><div class="card"><div class="list">${dates.length?dates.map(c=>`<div class="listitem"><div class="row"><b>${esc(c.title)}</b><span class="badge">${c.target_date}</span></div><div class="tiny">${statusLabel(c.status)} · ${c.progress||0}%</div></div>`).join(''):'<div class="empty">Añade fechas objetivo a tus cursos para ver tu planificación aquí.</div>'}</div></div>`}
+function xp(){return state.courses.filter(c=>c.status==='completed').length*250+state.sessions.length*25+state.goals.filter(g=>Number(g.current)>=Number(g.target)).length*150}
+function renderStats(){const hours=state.sessions.reduce((a,x)=>a+Number(x.minutes||0),0)/60,completed=state.courses.filter(x=>x.status==='completed').length,total=state.courses.length,rate=total?Math.round(completed/total*100):0;const cats={};state.courses.forEach(c=>cats[c.category||'Sin categoría']=(cats[c.category||'Sin categoría']||0)+1);const max=Math.max(1,...Object.values(cats));document.getElementById('page-stats').innerHTML=`<div class="hero"><div><div class="eyebrow">Insights</div><h1>Estadísticas</h1><p>Entiende cómo estás aprendiendo, no solo cuánto.</p></div></div><div class="grid stats"><div class="stat"><div class="num">${rate}%</div><div class="label">Tasa de finalización</div></div><div class="stat"><div class="num">${hours.toFixed(1)}h</div><div class="label">Horas registradas</div></div><div class="stat"><div class="num">${state.sessions.length}</div><div class="label">Sesiones</div></div><div class="stat"><div class="num">${xp()}</div><div class="label">XP</div></div><div class="stat"><div class="num">${Object.keys(cats).length}</div><div class="label">Categorías</div></div></div><div class="grid cols2"><div class="card"><h3>Cursos por categoría</h3>${Object.keys(cats).length?`<div class="chart">${Object.entries(cats).map(([k,v])=>`<div class="bar" style="height:${Math.max(8,v/max*100)}%"><span>${esc(k)}</span></div>`).join('')}</div>`:'<div class="empty">Aún no hay datos.</div>'}</div><div class="card"><h3>Gamificación</h3><div style="font-size:40px;margin:8px 0">✦</div><b>${xp()} XP</b><p class="tiny">250 XP por curso completado · 25 XP por sesión · 150 XP por objetivo cumplido.</p><div class="goalline"><i style="width:${xp()%1000/10}%"></i></div><p class="tiny">Siguiente nivel: ${Math.floor(xp()/1000)+1}</p></div></div>`}
+function renderAll(){if(!user)return;renderDashboard();renderCourses();renderSessions();renderCalendar();renderCertificates();renderGoals();renderStats()}
+function exportExcel(){
+ const wb=XLSX.utils.book_new();
+ const sheets={Cursos:state.courses,Sesiones:state.sessions,Objetivos:state.goals,Certificados:state.certificates};
+ for(const [n,rows] of Object.entries(sheets)){const clean=rows.map(r=>{const x={...r};delete x.user_id;delete x.id;delete x.created_at;return x});XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(clean.length?clean:[{info:'Sin datos'}]),n)}
+ XLSX.writeFile(wb,`learning-os-${new Date().toISOString().slice(0,10)}.xlsx`);toast("Excel descargado ↓")
+}
+boot();
+</script>
+</body>
+</html>
